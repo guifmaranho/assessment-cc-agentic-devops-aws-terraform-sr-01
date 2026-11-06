@@ -16,6 +16,8 @@ defaults:
 
 env:
   APP_DIR: codebase/rdicidr-0.1.0
+  # Rendered by App.js and asserted by App.test.js; CRA inlines it at test/build time.
+  REACT_APP_API_URL: ${{ vars.REACT_APP_API_URL || 'https://api.example.com' }}
 
 jobs:
   install:

@@ -1,0 +1,118 @@
+# NOTE: GitHub only executes workflows from <repo root>/.github/workflows.
+# This file and codebase/rdicidr-0.1.0/.github/workflows/ci.yaml must stay
+# identical; the install job fails if they drift apart.
+name: CI Pipeline
+
+on:
+  pull_request:
+    branches:
+      - devel
+      - stage
+      - main
+
+defaults:
+  run:
+    working-directory: codebase/rdicidr-0.1.0
+
+env:
+  APP_DIR: codebase/rdicidr-0.1.0
+  # Rendered by App.js and asserted by App.test.js; CRA inlines it at test/build time.
+  REACT_APP_API_URL: ${{ vars.REACT_APP_API_URL || 'https://api.example.com' }}
+
+jobs:
+  install:
+    # Only PRs from appropriately named branches: feature/*, bugfix/*, or devel (devel -> stage promotion).
+    if: >-
+      startsWith(github.head_ref, 'feature/') ||
+      startsWith(github.head_ref, 'bugfix/') ||
+      github.head_ref == 'devel'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Check workflow copies are in sync
+        working-directory: .
+        run: diff .github/workflows/ci.yaml ${{ env.APP_DIR }}/.github/workflows/ci.yaml
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: codebase/rdicidr-0.1.0/.nvmrc
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Cache node_modules
+        uses: actions/cache/save@v3
+        with:
+          path: codebase/rdicidr-0.1.0/node_modules
+          key: node-modules-${{ github.sha }}-${{ hashFiles('codebase/rdicidr-0.1.0/package-lock.json') }}
+
+  lint:
+    needs: [install]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: codebase/rdicidr-0.1.0/.nvmrc
+
+      - name: Restore node_modules
+        uses: actions/cache/restore@v3
+        with:
+          path: codebase/rdicidr-0.1.0/node_modules
+          key: node-modules-${{ github.sha }}-${{ hashFiles('codebase/rdicidr-0.1.0/package-lock.json') }}
+          fail-on-cache-miss: true
+
+      - name: Run linter
+        run: npm run lint
+
+  test:
+    needs: [lint]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: codebase/rdicidr-0.1.0/.nvmrc
+
+      - name: Restore node_modules
+        uses: actions/cache/restore@v3
+        with:
+          path: codebase/rdicidr-0.1.0/node_modules
+          key: node-modules-${{ github.sha }}-${{ hashFiles('codebase/rdicidr-0.1.0/package-lock.json') }}
+          fail-on-cache-miss: true
+
+      - name: Run tests
+        env:
+          CI: true
+        run: npm run test
+
+  build:
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: codebase/rdicidr-0.1.0/.nvmrc
+
+      - name: Restore node_modules
+        uses: actions/cache/restore@v3
+        with:
+          path: codebase/rdicidr-0.1.0/node_modules
+          key: node-modules-${{ github.sha }}-${{ hashFiles('codebase/rdicidr-0.1.0/package-lock.json') }}
+          fail-on-cache-miss: true
+
+      - name: Build project
+        run: npm run build

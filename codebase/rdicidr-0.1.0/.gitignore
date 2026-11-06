@@ -22,3 +22,10 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# terraform (state holds infrastructure details; providers are re-downloaded by init)
+/terraform/.terraform/
+/terraform/terraform.tfstate.d/
+/terraform/*.tfstate
+/terraform/*.tfstate.*
+/terraform/*.tfplan

@@ -10,10 +10,10 @@ variable "app_name" {
   default     = "rdicidr"
 }
 
-variable "container_image" {
+variable "image_tag" {
   type        = string
-  description = "ECR image URI"
-  default     = "123456789012.dkr.ecr.us-east-1.amazonaws.com/rdicidr:latest"
+  description = "Image tag in the environment's ECR repository (repository is created by this config)"
+  default     = "latest"
 }
 
 variable "container_port" {
@@ -24,8 +24,8 @@ variable "container_port" {
 
 variable "health_check_path" {
   type        = string
-  description = "Health check endpoint path"
-  default     = "/healthz"
+  description = "Health check endpoint path (served by nginx.conf)"
+  default     = "/health"
 }
 
 variable "desired_count" {

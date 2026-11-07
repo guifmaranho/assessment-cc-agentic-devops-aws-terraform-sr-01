@@ -78,3 +78,49 @@ Also added an ECR repo, a deployment circuit breaker, a health check grace perio
 `aws ecs wait services-stable`: 2/2 running, rollout COMPLETED; both targets healthy; 5/5 requests to `/` and
 `/health` via the ALB returned 200.
 URL: http://rdicidr-devel-alb-1380971669.us-east-1.elb.amazonaws.com
+
+### 20:52 — Claude
+PR #4 CI passed all four jobs; merged into devel. 30-minute checkpoint: ~31 min elapsed, both parts done.
+Proposed: promote devel to stage, optionally deploy stage, then wrap up.
+
+### 20:53 — User
+> Yes
+
+**Claude:**
+- **PR #5** `devel → stage` opened. To prove the guard works, opened **PR #6** from `feature/stage-guard-demo`
+  into `stage`: `source-branch-check` **failed** and the PR was BLOCKED. Closed it without merging.
+- Side effect observed: both PRs pointed at the same commit, and GitHub attaches checks to the commit, so PR #6's
+  failed check also blocked PR #5 even after its own run passed (the ruleset still counted the failed run on the
+  commit). Fix: re-ran PR #5's guard run and deleted the demo run. PR #5 became CLEAN and was merged.
+  Lesson: a demo branch needs its own commit.
+- **Stage deploy:** workspace `stage`, ECR via `-target`, pushed the same image, full apply (12 resources),
+  services stable, both targets healthy. `/` and `/health` return 200.
+  URL: http://rdicidr-stage-alb-1681782625.us-east-1.elb.amazonaws.com
+
+### 20:56 — User
+> Are there any additional checks we can visually do to check that the application is running correctly?
+
+**Claude:** Suggested: use the CIDR calculator in the browser (enter an IP/mask), `/health` returning `ok`, the SPA
+fallback on an unknown path; in the ECS console, the Tasks tab (2 RUNNING / HEALTHY), Deployments (COMPLETED) and
+Events ("reached a steady state"); target group targets (2 healthy on `/health`); the ALB listener and SG;
+CloudWatch logs `/ecs/rdicidr-devel`; and optionally stopping one task to watch ECS replace it with no downtime.
+
+### 20:59 — Wrap-up
+Both environments verified (200 on `/` and `/health`). Final log committed via PR into devel. Generated the
+submission zip with `generateZip`. The raw Claude Code transcript is added to the local `.chat-history/` for the
+zip only (not pushed: it contains the challenge clone token from the original remote URL).
+
+### 21:03 — User
+> Do the resilience demo and wrap up anything left
+
+**Claude:** Ran a resilience demo on `devel`: probed the ALB once a second in the background, stopped one of the two
+tasks with `aws ecs stop-task`, and watched the service recover.
+- 21:04:04 stopped task `908dfcb8…`; target `172.31.17.0` went to `draining`
+- 21:04:39 ECS started replacement task `ed7b575d…`
+- 21:05:08 new target `172.31.84.173` registered; 21:05:18 "service has reached a steady state", 2/2 running,
+  both targets healthy
+- **ALB probes during the demo: 77 total, 77 × 200, 0 failures**, so no downtime.
+
+Wrap-up: added a root `.gitignore` for the local zip and the raw transcript (it contains the clone token, so it stays
+out of the public repo and goes only into the zip), merged this log via PR, re-copied the transcript and regenerated
+the zip.

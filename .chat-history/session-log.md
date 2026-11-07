@@ -109,3 +109,18 @@ CloudWatch logs `/ecs/rdicidr-devel`; and optionally stopping one task to watch 
 Both environments verified (200 on `/` and `/health`). Final log committed via PR into devel. Generated the
 submission zip with `generateZip`. The raw Claude Code transcript is added to the local `.chat-history/` for the
 zip only (not pushed: it contains the challenge clone token from the original remote URL).
+
+### 21:03 — User
+> Do the resilience demo and wrap up anything left
+
+**Claude:** Ran a resilience demo on `devel`: probed the ALB once a second in the background, stopped one of the two
+tasks with `aws ecs stop-task`, and watched the service recover.
+- 21:04:04 stopped task `908dfcb8…`; target `172.31.17.0` went to `draining`
+- 21:04:39 ECS started replacement task `ed7b575d…`
+- 21:05:08 new target `172.31.84.173` registered; 21:05:18 "service has reached a steady state", 2/2 running,
+  both targets healthy
+- **ALB probes during the demo: 77 total, 77 × 200, 0 failures**, so no downtime.
+
+Wrap-up: added a root `.gitignore` for the local zip and the raw transcript (it contains the clone token, so it stays
+out of the public repo and goes only into the zip), merged this log via PR, re-copied the transcript and regenerated
+the zip.
